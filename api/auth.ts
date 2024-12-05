@@ -14,7 +14,8 @@ import { getPlayload } from '../helpers/playload'
 
 const router = Router()
 
-router.get('/user/:site/:app', routeCache.cacheSeconds(60*60*60, (req: Request, res: Response) => {
+// cache permanent when not authorized
+router.get('/user/:site/:app', routeCache.cacheSeconds(0, (req: Request, res: Response) => {
     const {
         params: { site }
     } = req
@@ -27,6 +28,7 @@ router.get('/user/:site/:app', routeCache.cacheSeconds(60*60*60, (req: Request, 
   const pelcroToken = req.cookies[PELCRO_COOKIE]
   const tokenCookie = req.cookies[`${TOKEN_COOKIE}.${site}`]
   if (!pelcroToken) {
+    // if user sign out. clear session cookie, and invalidate cache
       if (tokenCookie) {
         res.clearCookie(`${TOKEN_COOKIE}.${site}`)
         const id = cryptr.decrypt(tokenCookie).split(':').shift()
@@ -35,10 +37,12 @@ router.get('/user/:site/:app', routeCache.cacheSeconds(60*60*60, (req: Request, 
     res.status(401).send('unauthorize')
     return
   }
+  // if session cookie existed, redirect
   if (tokenCookie) {
     const id = cryptr.decrypt(tokenCookie).split(':').shift()
     res.redirect(301, `/auth/user/${site}/${app}/${id}`)
   } else {
+    // otherwise, get user info to calculate redirect path.
     const userData = await loadUser(pelcroToken, site)
     if (!userData) {
       res.status(401).send('Unauthorized')
@@ -56,9 +60,10 @@ router.get('/user/:site/:app', routeCache.cacheSeconds(60*60*60, (req: Request, 
   }
 })
 
+// cache actually jwt get request
 router.get(
   '/user/:site/:app/:id',
-  routeCache.cacheSeconds(60 * 60 * 60),
+  routeCache.cacheSeconds(24 * 60 * 60),
   async (req: Request, res: Response) => {
     const {
       params: { site, app }

@@ -1,10 +1,14 @@
 import { base64decode } from 'nodejs-base64'
-import { PELCRO_API_DOMAIN } from '../constants'
+import { PELCRO_API_DOMAIN, redisClient } from '../constants'
 import { transformUser } from './transform'
 
 export const loadUser = async (token: string, siteId: string) => {
   // Define SDK pelcro to grab a user by authToken.
   try {
+    const res = await redisClient.get(token);
+    if (res) {
+      return JSON.parse(res);
+    }
     const response = await fetch(
       `${PELCRO_API_DOMAIN}/api/v1/sdk/customer/`,
       {
@@ -21,7 +25,9 @@ export const loadUser = async (token: string, siteId: string) => {
     )
     const { data: userData } = await response.json()
 
-    return transformUser(userData)
+    const user = transformUser(userData);
+    redisClient.set(token, JSON.stringify(user), "EX", 10, "NX");
+    return user;
   } catch (error) {
     console.log(
       'An error occurred while trying to retrieve the user information: ' +
