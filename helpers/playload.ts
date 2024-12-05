@@ -10,7 +10,6 @@ export const getPlayload = async (user: TransformedUser, app: string) => {
       const keys = `${value}`.split('.')
       const prefix = keys[0]
       const rest = keys.slice(1).join('.')
-      console.log(prefix, rest);
       return {
         ...acc,
         [key]: prefix === 'user' ? get(user, rest) : value

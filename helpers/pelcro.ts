@@ -19,7 +19,6 @@ export const loadUser = async (token: string, siteId: string) => {
         }),
       },
     )
-    console.log('response:', response);
     const { data: userData } = await response.json()
 
     return transformUser(userData)
